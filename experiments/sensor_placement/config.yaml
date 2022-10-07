@@ -1,0 +1,13 @@
+multiple_timesteps:
+  n_MC: 100
+  n_sensor_positions: 49
+  n_sensors:
+    start: 5
+    stop: 25
+    step_size: 5
+  noise: 1.
+  time: 168
+emissions:
+  prior: mean_TNO
+  prior_uncertainty: mean_TNO_uncertainty
+  truth: combined_emissions

@@ -1,0 +1,17 @@
+multiple_timesteps:
+  n_MC: 20
+  sensors:
+    n_sensors: # Place optimally
+      start: 5
+      stop: 25
+      step_size: 5
+  noise: 1.
+  time: 168
+  uncertainty_factor:
+    start: 0.6
+    end: 1.0
+    step: 0.1
+emissions:
+  prior: mean_TNO
+  prior_uncertainty: mean_TNO_uncertainty
+  truth: combined_emissions_diurnal

@@ -1,3 +1,2 @@
 paths:
-  plot_jar: "./"
-  data_jar: "./"
+  data_path: /home/rmaiwald/results/experiments/

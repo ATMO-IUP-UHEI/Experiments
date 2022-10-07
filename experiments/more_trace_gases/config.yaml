@@ -1,0 +1,42 @@
+# Take single species network results from optimal_sensor_choice
+multiple_timesteps:
+  n_MC: 20
+  n_sensor_positions: 20
+  n_sensors: 10
+  noise: 1 # ppm
+  time:
+    hours: [168] # Maybe shorter
+  CO:
+    noise: ?
+    n_sensors: [0, 1, 2, 3]
+    sampling_duration: ? # Duration for averaging
+    sampling_rate: ?
+    emission_factors:
+      Traffic: 0.
+      Heating: 0.
+      Cement: 0.
+      Rest: 0.
+  NOx:
+    noise: ? 
+    n_sensors: [0, 1, 2, 3]
+    sampling_duration: ? 
+    sampling_rate: ?
+    emission_factors:
+      Traffic: 0.
+      Heating: 0.
+      Cement: 0.
+      Rest: 0.
+  C14:
+    noise: ?
+    n_sensors: [0, 1]
+    sampling_duration: ? 
+    sampling_rate: ?
+    emission_factors:
+      Traffic: 0.
+      Heating: 0.
+      Cement: 0.
+      Rest: 0.
+emissions:
+  prior: mean_TNO
+  prior_uncertainty: mean_TNO_uncertainty
+  truth: combined_emissions_diurnal

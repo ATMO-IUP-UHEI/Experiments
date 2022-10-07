@@ -1,0 +1,17 @@
+transport:
+  time: 1
+  mode: random
+sensors:
+  n_sensors: 20
+  height: 4 # 0-4
+  noise: 1.0
+  seed: 2
+emissions:
+  prior: mean_TNO
+  prior_uncertainty: combined_emissions
+  truth: combined_emissions
+reader:
+  catalog_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gramm_catalog/
+  config_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/config/
+  simulation_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/
+  
