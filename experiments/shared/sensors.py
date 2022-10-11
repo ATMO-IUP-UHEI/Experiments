@@ -7,14 +7,27 @@ from ggpymanager import GRAL
 
 
 class Sensors:
-    def __init__(self, config=None) -> None:
+    def __init__(self, config) -> None:
+        """
+
+        Parameters
+        ----------
+        config : dict
+            Required config keys:
+                n_sensors: number of sensors.
+                noise: std of measurements from sensor.
+            Optional config keys (default):
+                seed: (1) seed for random number generator
+                time: (1) number of hourly measurements
+                height: (0) height level of the sensors
+        """
         self.rng = np.random.default_rng(config.get("seed", 1))
 
-        self.time = config["time"]
+        self.time = config.get("time", 1)
 
-        self.n_sensors = config["sensors"]["n_sensors"]
-        self.height = config["sensors"].get("height", 0)
-        noise = config["sensors"]["noise"]
+        self.n_sensors = config["n_sensors"]
+        self.height = config.get("height", 0)
+        noise = config["noise"]
         if isinstance(noise, dict):
             pass
         else:
