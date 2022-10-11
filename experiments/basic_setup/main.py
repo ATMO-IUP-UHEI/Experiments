@@ -7,6 +7,7 @@ from bayesinverse import Regression
 
 
 from experiments.shared import CONSTANTS, Experiment
+from experiments.shared import utilities as utils
 
 
 CONSTANTS.TEST_INT
@@ -18,20 +19,23 @@ class BasicSetup(Experiment):
 
     def run(self):
         self.emissions.prior
-        self.emissions.prior_uncertainty
+        self.emissions.prior_variance
         self.emissions.truth
 
-        self.K = self.transport.get_K(800, self.sensors, self.emissions)
-      
+        self.K = self.transport.get_transport(self.sensors, self.emissions)
+
         self.reg = Regression(
-            y=self.K @ self.emissions.truth + self.sensors.get_noise(),
-            K=self.K,
-            x_prior=self.emissions.prior,
-            x_covariance=self.emissions.prior_uncertainty,
-            y_covariance=np.repeat(self.sensors.noise, self.sensors.n_sensors),
+            y=utils.stack_xr(
+                self.K @ self.emissions.truth + self.sensors.get_noise()
+            ).values,
+            K=utils.stack_xr(self.K).values,
+            x_prior=utils.stack_xr(self.emissions.prior).values,
+            x_covariance=utils.stack_xr(self.emissions.prior_covariance).values,
+            y_covariance=utils.stack_xr(self.sensors.noise).values,
         )
         x_est, res, rank, s = self.reg.fit()
-        print(self.emissions.truth - x_est)
+        posterior = self.emissions.to_xr(x_est)
+        print(self.emissions.truth - posterior)
         print(self.reg.get_averaging_kernel())
 
     

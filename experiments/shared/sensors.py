@@ -1,12 +1,16 @@
 import numpy as np
 
+import xarray as xr
+
 
 from ggpymanager import GRAL
 
 
 class Sensors:
     def __init__(self, config=None) -> None:
-        self.rng = np.random.default_rng(config["sensors"].get("seed", None))
+        self.rng = np.random.default_rng(config.get("seed", 1))
+
+        self.time = config["time"]
 
         self.n_sensors = config["sensors"]["n_sensors"]
         self.height = config["sensors"].get("height", 0)
@@ -14,7 +18,10 @@ class Sensors:
         if isinstance(noise, dict):
             pass
         else:
-            self.noise = noise
+            self.noise = xr.DataArray(
+                data=np.tile(noise, [self.n_sensors,self.time]),
+                dims=["sensor", "time_measurement"],
+            )
 
         # Add support for MC
         self.create_grid(self.n_sensors)
@@ -45,4 +52,13 @@ class Sensors:
         return self.index
 
     def get_noise(self):
-        return self.rng.normal(loc=0., scale=self.noise, size=self.n_sensors)
+        mean = np.zeros_like(self.noise)
+        std = self.noise
+        noise = self.rng.normal(
+            loc=mean, scale=std #, size=(self.n_sensors, self.time)
+        )
+        xr_noise = xr.DataArray(
+            data=noise,
+            dims=self.noise.dims
+        )
+        return xr_noise
