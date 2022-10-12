@@ -5,15 +5,28 @@ from ggpymanager import Reader, Status
 
 class Transport:
     def __init__(self, config):
-        self.rng = np.random.default_rng(config.get("seed", 1))
+        """
+        Parameters
+        ----------
+        config : dict
+            Required config keys:
+                catalog_path: 
+                config_path: 
+                simulation_path: 
+            Optional config keys (default):
+                seed: (0)
+                time: (1) number of hourly measurements.
+                mode: (random) {random, random_realistic, slice}
+        """
+        self.rng = np.random.default_rng(config.get("seed", 0))
         
         self.reader = Reader(
-            config["reader"]["catalog_path"],
-            config["reader"]["config_path"],
-            config["reader"]["simulation_path"],
+            config["catalog_path"],
+            config["config_path"],
+            config["simulation_path"],
         )
-        self.time = config["time"]
-        self.mode = config["transport"]["mode"]
+        self.time = config.get("time", 1)
+        self.mode = config.get("mode", "random")
 
         self.unfinished_meteo_numbers = self.reader.get_gral_missing()
 

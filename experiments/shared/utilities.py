@@ -7,15 +7,14 @@ import xarray as xr
 class CONSTANTS:
     TEST_INT = 3
 
-
+stacked_dims = ["measurement", "state", "measurement_2", "state_2"]
+dim_pairs = [
+    ["sensor", "time_measurement"],
+    ["source_group", "time_state"],
+    ["sensor_2", "time_measurement_2"],
+    ["source_group_2", "time_state_2"],
+    ]
 def stack_xr(xr_data_array):
-    stacked_dims = ["measurement", "state", "measurement_2", "state_2"]
-    dim_pairs = [
-        ["sensor", "time_measurement"],
-        ["source_group", "time_state"],
-        ["sensor_2", "time_measurement_2"],
-        ["source_group_2", "time_state_2"],
-        ]
     for stacked_dim, dim_pair in zip(stacked_dims, dim_pairs):
         if dim_pair[0] in xr_data_array.dims and dim_pair[1] in xr_data_array.dims:
             xr_data_array = xr_data_array.stack({stacked_dim: dim_pair})
@@ -23,17 +22,16 @@ def stack_xr(xr_data_array):
 
 
 def unstack_xr(xr_data_array):
-    if "measurement" in xr_data_array.dims:
-        xr_data_array = xr_data_array.unstack("measurement")
-    if "state" in xr_data_array.dims:
-        xr_data_array = xr_data_array.unstack("state")
+    for stacked_dim in stacked_dims:
+        if stacked_dim in xr_data_array.dims:
+            xr_data_array = xr_data_array.unstack(stacked_dim)
     return xr_data_array
 
 
 # Create covariance matrices
 
 # Temporal correlation with correlation length tau
-def compute_corr(delta_t, tau_h, tau_d, delta_l, tau_l):
+def compute_corr(delta_t, tau_h, tau_d, delta_l=0, tau_l=1):
     corr_factor = (delta_t % 24) / tau_h + (delta_t // 24) / tau_d + delta_l / tau_l
     if (corr_factor) <= 3:
         return np.exp(-corr_factor)

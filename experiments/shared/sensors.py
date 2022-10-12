@@ -9,7 +9,6 @@ from ggpymanager import GRAL
 class Sensors:
     def __init__(self, config) -> None:
         """
-
         Parameters
         ----------
         config : dict

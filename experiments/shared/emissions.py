@@ -3,9 +3,7 @@ import numpy as np
 
 import xarray as xr
 import pandas as pd
-
-
-from ggpymanager import Reader
+from pathlib import Path
 
 from ..shared import utilities as utils
 
@@ -58,20 +56,31 @@ n_sources = 59
 point_list = None
 
 class Emissions:
-    def __init__(self, config=None):
-        self.reader = Reader(
-            config["reader"]["catalog_path"],
-            config["reader"]["config_path"],
-            config["reader"]["simulation_path"],
-        )
+    def __init__(self, config):
+        """
+        Parameters
+        ----------
+        config : dict
+            Required config keys:
+                prior: prior emission name {TNO, mean_TNO, combined_emissions}.
+                prior_variance: prior variance name {TNO_variance, mean_TNO_variance}.
+                truth: prior emission name {TNO, mean_TNO, combined_emissions}.
+                emission_path: path to GRAL emission files.
+            Optional config keys (default):
+                time: (1) number of hourly measurements.
+                mode: (single_time) {single_time, constant, diurnal}
+                tau_h: correlation length in hours.
+                tau_d: correlation length in days.
+        """
+        self.time = config.get("time", 1)
+        self.mode = config.get("mode", "single_time")
 
-        self.time = config["time"]
-        self.constant = config["emissions"].get("constant", True)
+        self.config_path = Path(config["emission_path"])
 
         # Relative emission values
-        self.prior = self.get(config["emissions"]["prior"])
-        self.prior_variance = self.get(config["emissions"]["prior_variance"])
-        self.truth = self.get(config["emissions"]["truth"])
+        self.prior = self.get(config["prior"])
+        self.prior_variance = self.get(config["prior_variance"])
+        self.truth = self.get(config["truth"])
         # Absolute emission values
         self.prior_absolute = self.prior * self.get_absolute()
         self.prior_absolute_variance = self.prior_variance * self.get_absolute()
@@ -84,13 +93,14 @@ class Emissions:
         # Filter only used source groups
         self.prior = self.prior[self.mask]
         self.prior_variance = self.prior_variance[self.mask]
-        self.prior_covariance = utils.compute_prior_covariance(
-            xr_prior_var=self.prior_variance, 
-            tau_h=config["emissions"]["correlation"]["tau_h"], 
-            tau_d=config["emissions"]["correlation"]["tau_d"],
-            tau_l=config["emissions"]["correlation"]["tau_l"],
-            point_list=point_list,  
-        )
+        if "correlation" in config:
+            self.prior_covariance = utils.compute_prior_covariance(
+                xr_prior_var=self.prior_variance, 
+                tau_h=config["correlation"]["tau_h"], 
+                tau_d=config["correlation"]["tau_d"],
+            )
+        else:
+            self.prior_covariance = self.prior_variance
         self.truth = self.truth[self.mask]
         # Absolute emission values
         self.prior_absolute = self.prior_absolute[self.mask]
@@ -101,7 +111,7 @@ class Emissions:
         pass
 
     def get(self, name):
-        xr_time = self.get_time_factor(name)
+        xr_time_factor = self.get_time_factor()
 
         func = {
             "TNO": self.get_TNO,
@@ -117,53 +127,52 @@ class Emissions:
             dims=["source_group"],
             coords={"source_group": [i + 1 for i in range(n_sources)]},
         )
-        xr_emission = xr_emission * xr_time
+        xr_emission = xr_emission * xr_time_factor
         # xr_emission = xr_emission.stack(state=["time_state", "source_group"])
         return xr_emission
 
-    def get_time_factor(self, name):
-        position = name.find("_diurnal")
-        if position >= 0:
+    def get_time_factor(self):
+        if self.mode == "diurnal":
             time_factor = self.get_diurnal_factors(self.time)
-            name = name[:position]
-        elif self.constant:
+        elif self.mode == "single_time":
             time_factor = [1.0]
-        else:
+        elif self.mode == "constant":
             time_factor = np.ones(self.time)
-        xr_time = xr.DataArray(time_factor, dims=["time_state"])
-        return xr_time
+        xr_time_factor = xr.DataArray(time_factor, dims=["time_state"])
+        return xr_time_factor
 
     def get_absolute(self):
         emissions = np.zeros(n_sources)
         file_list = ["point.dat", "line.dat", "cadastre.dat"]
         col_list = ["emission [kg/h]", "emission [kg/h/km]", "emission [kg/h]"]
         for file_name, col_name in zip(file_list, col_list):
-            file_path = self.reader.config_path / file_name
-            # Only "cadastre.dat" has no comments
-            skiprows = 0 if (file_name == "cadastre.dat") else 1
-            df = pd.read_csv(file_path, skiprows=skiprows, index_col=False)
-            for source_group in df["source group"].unique():
-                source_id = source_group - 1
-                # Sum all sources from source group
-                if file_name == "line.dat":
-                    # Multiply emissions with street length
-                    m_to_km = 1 / 1000
-                    length = (
-                        np.sqrt(
-                            (df["x1"] - df["x2"]) ** 2
-                            + (df["y1"] - df["y2"]) ** 2
-                            + (df["z1"] - df["z2"]) ** 2
+            file_path = self.config_path / file_name
+            if file_path.exists():
+                # Only "cadastre.dat" has no comments
+                skiprows = 0 if (file_name == "cadastre.dat") else 1
+                df = pd.read_csv(file_path, skiprows=skiprows, index_col=False)
+                for source_group in df["source group"].unique():
+                    source_id = source_group - 1
+                    # Sum all sources from source group
+                    if file_name == "line.dat":
+                        # Multiply emissions with street length
+                        m_to_km = 1 / 1000
+                        length = (
+                            np.sqrt(
+                                (df["x1"] - df["x2"]) ** 2
+                                + (df["y1"] - df["y2"]) ** 2
+                                + (df["z1"] - df["z2"]) ** 2
+                            )
+                            * m_to_km
                         )
-                        * m_to_km
-                    )
-                    emissions[source_id] = (
-                        df[df["source group"] == source_group][col_name] * length
-                    ).sum()
-                else:
-                    # Just sum
-                    emissions[source_id] = df[df["source group"] == source_group][
-                        col_name
-                    ].sum()
+                        emissions[source_id] = (
+                            df[df["source group"] == source_group][col_name] * length
+                        ).sum()
+                    else:
+                        # Just sum
+                        emissions[source_id] = df[df["source group"] == source_group][
+                            col_name
+                        ].sum()
         xr_absolute_emissions = xr.DataArray(emissions, dims="source_group")
         return xr_absolute_emissions
 
