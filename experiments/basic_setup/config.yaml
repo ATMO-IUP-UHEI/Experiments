@@ -1,5 +1,5 @@
 seed: 2
-time: 10
+time: 3
 transport:
   mode: random
 sensors:
@@ -7,14 +7,14 @@ sensors:
   height: 1 # 0-4
   noise: 1.0
 emissions:
-  constant: False
+  mode: constant
   prior: mean_TNO
-  prior_variance: TNO_variance
+  prior_variance: mean_TNO_variance
   truth: TNO
-  correlation:
-    tau_h: .001 # 1/e correlation after 1h
-    tau_d: 0.001 #2. # 1/e correlation after 2d
-    tau_l: null # 1/e correlation for each km in mean distance
+  # correlation:
+  #   tau_h: .001 # 1/e correlation after 1h
+  #   tau_d: 0.001 #2. # 1/e correlation after 2d
+  #   tau_l: null # 1/e correlation for each km in mean distance
 reader:
   catalog_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gramm_catalog/
   config_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/config/

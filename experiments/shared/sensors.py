@@ -90,3 +90,9 @@ class Sensors:
         xr_noise = xr.DataArray(data=noise, dims=["sensor", "time_measurement"])
         sample_ids = self.get_sample_ids(n_sub_sample)
         return xr_noise.isel(sensor=sample_ids)
+
+    def get_covariance(self):
+        return xr.DataArray(
+            data=np.tile(self.std**2, (self.n_sensors, self.time)),
+            dims=["sensor", "time_measurement"],
+        )

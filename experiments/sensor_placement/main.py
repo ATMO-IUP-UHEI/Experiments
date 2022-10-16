@@ -3,9 +3,9 @@ from ..shared import CONSTANTS, Experiment
 
 CONSTANTS.TEST_INT
 
-class OptimalSensorChoice(Experiment):
-    def __init__(self):
-        super(Experiment, self).__init__()
+class SensorPlacement(Experiment):
+    def __init__(self, config_path):
+        super(SensorPlacement, self).__init__(config_path)
 
     def run(self):
         pass

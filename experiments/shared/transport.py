@@ -1,6 +1,10 @@
 import numpy as np
 import xarray as xr
+
 from ggpymanager import Reader, Status
+
+
+from ..shared import utilities as utils
 
 
 class Transport:
@@ -63,15 +67,7 @@ class Transport:
                                 )
                             ]
 
-        # Convert from mu g/m^3 to ppm
-        # At 273.15 K and 1 bar
-        Vm = 22.71108  # standard molar volume of ideal gas [l/mol]
-        m = 44.01  # molecular weight mass [g/mol]
-        cubic_meter_to_liter = 1000
-        mu_g_to_g = 1e-6
-        to_ppm = 1e6
-        factor = Vm / m / cubic_meter_to_liter
-        xr_K *= factor
+        xr_K = utils.convert_to_ppm(xr_K)
         return xr_K
 
     def get_transport(self, sensors, emissions):
@@ -87,17 +83,17 @@ class Transport:
             )
             meteo_ids = np.array(finished_meteo_numbers)[ids] - 1
         # Construct the transport model matrix K
-        time_measurement = self.time
-        time_state = self.time if not emissions.constant else 1
+        n_time_measurement = self.time
+        n_time_state = self.time if not emissions.mode == "single_time" else 1
         K = np.zeros(
-            (sensors.n_sensors, time_measurement, len(emissions.prior), time_state)
+            (sensors.n_sensors, n_time_measurement, len(emissions.prior), n_time_state)
         )
         xr_K = xr.DataArray(
             data=K, dims=["sensor", "time_measurement", "source_group", "time_state"]
         )
         for ti in range(self.time):
             ti_measurement = ti
-            ti_state = ti if not emissions.constant else 0
+            ti_state = ti if not emissions.mode == "single_time" else 0
             ti_meteo_id = meteo_ids[ti]
             xr_K.loc[:, ti_measurement, :, ti_state] = self.get_K(
                 ti_meteo_id, sensors, emissions

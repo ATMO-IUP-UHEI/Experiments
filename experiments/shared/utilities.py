@@ -7,13 +7,27 @@ import xarray as xr
 class CONSTANTS:
     TEST_INT = 3
 
+
 stacked_dims = ["measurement", "state", "measurement_2", "state_2"]
 dim_pairs = [
     ["sensor", "time_measurement"],
     ["source_group", "time_state"],
     ["sensor_2", "time_measurement_2"],
     ["source_group_2", "time_state_2"],
-    ]
+]
+
+
+def convert_to_ppm(obj):
+    # Convert from mu g/m^3 to ppm
+    # At 273.15 K and 1 bar
+    Vm = 22.71108  # standard molar volume of ideal gas [l/mol]
+    m = 44.01  # molecular weight mass [g/mol]
+    cubic_meter_to_liter = 1000
+    mu_g_to_g = 1e-6
+    to_ppm = 1e6
+    factor = Vm / m / cubic_meter_to_liter
+    return obj * factor
+
 def stack_xr(xr_data_array):
     for stacked_dim, dim_pair in zip(stacked_dims, dim_pairs):
         if dim_pair[0] in xr_data_array.dims and dim_pair[1] in xr_data_array.dims:

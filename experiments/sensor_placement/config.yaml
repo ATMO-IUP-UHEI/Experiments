@@ -1,13 +1,22 @@
-multiple_timesteps:
-  n_MC: 100
-  n_sensor_positions: 49
-  n_sensors:
-    start: 5
-    stop: 25
-    step_size: 5
-  noise: 1.
-  time: 168
+seed: 2
+time: 3
+transport:
+  mode: random
+sensors:
+  n_sensors: 100
+  height: 0 # 0-4
+  noise: 1.0
 emissions:
+  mode: constant
   prior: mean_TNO
-  prior_uncertainty: mean_TNO_uncertainty
-  truth: combined_emissions
+  prior_variance: mean_TNO_variance
+  truth: TNO
+  # correlation:
+  #   tau_h: .001 # 1/e correlation after 1h
+  #   tau_d: 0.001 #2. # 1/e correlation after 2d
+  #   tau_l: null # 1/e correlation for each km in mean distance
+reader:
+  catalog_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gramm_catalog/
+  config_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/config/
+  simulation_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/
+  

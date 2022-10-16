@@ -31,7 +31,7 @@ class BasicSetup(Experiment):
             K=utils.stack_xr(self.K).values,
             x_prior=utils.stack_xr(self.emissions.prior).values,
             x_covariance=utils.stack_xr(self.emissions.prior_covariance).values,
-            y_covariance=utils.stack_xr(self.sensors.noise).values,
+            y_covariance=utils.stack_xr(self.sensors.get_covariance()).values,
         )
         x_est, res, rank, s = self.reg.fit()
         posterior = self.emissions.to_xr(x_est)
