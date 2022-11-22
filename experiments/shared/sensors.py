@@ -70,15 +70,21 @@ class Sensors:
         return sample_ids
 
     def get_index(self, n_sub_sample=None):
-        if (self.index is None) or (n_sub_sample is not None):
-            sample_ids = self.get_sample_ids(n_sub_sample)
-
+        if self.index is None:
             self.index = (
-                self.xmesh.flatten()[sample_ids[:n_sub_sample]],
-                self.ymesh.flatten()[sample_ids[:n_sub_sample]],
+                self.xmesh.flatten()[:self.n_sensors],
+                self.ymesh.flatten()[:self.n_sensors],
+                np.repeat(self.height, self.n_sensors),
+            )
+        if n_sub_sample is not None:
+            sample_ids = self.get_sample_ids(n_sub_sample)
+            return (
+                self.xmesh.flatten()[sample_ids],
+                self.ymesh.flatten()[sample_ids],
                 np.repeat(self.height, self.n_sensors)[sample_ids],
             )
-        return self.index
+        else:
+            return self.index
 
     def get_noise(self, n_sub_sample=None):
         if n_sub_sample is None:

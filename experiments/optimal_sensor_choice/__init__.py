@@ -1,4 +1,4 @@
-from .main import BasicSetup
+from .main import OptimalSensorChoice
 
 
-__all__ = ["BasicSetup"]
+__all__ = ["OptimalSensorChoice"]

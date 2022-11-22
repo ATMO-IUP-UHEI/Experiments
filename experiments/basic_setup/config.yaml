@@ -1,16 +1,17 @@
 seed: 2
-time: 3
+time: 100
 transport:
-  mode: random
+  mode: realistic
 sensors:
   n_sensors: 20
-  height: 1 # 0-4
+  height: 0 # 0-4
   noise: 1.0
 emissions:
-  mode: constant
+  prior_mode: constant
   prior: mean_TNO
   prior_variance: mean_TNO_variance
   truth: TNO
+  truth_mode: constant
   # correlation:
   #   tau_h: .001 # 1/e correlation after 1h
   #   tau_d: 0.001 #2. # 1/e correlation after 2d
@@ -19,4 +20,5 @@ reader:
   catalog_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gramm_catalog/
   config_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/config/
   simulation_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/
-  
+paths:
+  data_jar: /home/rmaiwald/results/experiments/

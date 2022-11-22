@@ -1,4 +1,4 @@
-from .main import BasicSetup
+from .main import MoreTraceGases
 
 
-__all__ = ["BasicSetup"]
+__all__ = ["MoreTraceGases"]

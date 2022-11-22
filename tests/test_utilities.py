@@ -42,7 +42,7 @@ def test_utilities():
         delta_t=24.0,
         tau_h=1.0,
         tau_d=1.0,
-    ) == np.exp(-1)
+    ) == 0.
     assert (
         utils.compute_corr(
             delta_t=12.0,

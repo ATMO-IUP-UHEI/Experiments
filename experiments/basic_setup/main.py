@@ -6,16 +6,14 @@ import time
 from bayesinverse import Regression
 
 
-from experiments.shared import CONSTANTS, Experiment
+from experiments.shared import Experiment
 from experiments.shared import utilities as utils
 
-
-CONSTANTS.TEST_INT
 
 
 class BasicSetup(Experiment):
     def __init__(self, config_path):
-        super(BasicSetup, self).__init__(config_path)
+        super().__init__(config_path)
 
     def run(self):
         self.emissions.prior

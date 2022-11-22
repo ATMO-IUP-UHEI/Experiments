@@ -1,7 +1,5 @@
-from ..shared import CONSTANTS, Experiment
+from ..shared import Experiment
 
-
-CONSTANTS.TEST_INT
 
 class SensorPlacement(Experiment):
     def __init__(self, config_path):

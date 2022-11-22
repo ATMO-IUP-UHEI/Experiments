@@ -3,9 +3,57 @@ import numpy as np
 import xarray as xr
 
 
-@dataclass
-class CONSTANTS:
-    TEST_INT = 3
+import ggpymanager.utils
+
+
+def concatenate_indices(ind_a, ind_b):
+    """
+    Concatenate two indices from sensor configuration.
+
+    Examples
+    --------
+
+    >>> index = concatenate_indices(sensors_co2.get_index(), sensors_co.get_index())
+
+    Parameters
+    ----------
+    ind_a : tuple of arrays
+        Three arrays with the x, y, and z coordinates for sensor positions.
+    ind_b : tuple of arrays
+        Three arrays with the x, y, and z coordinates for sensor positions.
+
+    Returns
+    -------
+    new_ind : tuple of arrays
+        New concatenated index of positions.
+    """
+    new_ind = tuple()
+    for a, b in zip(ind_a, ind_b):
+        new_ind += (np.concatenate([a,b]),)
+    return new_ind
+
+
+def var_of_sum(covariance):
+    """
+    Compute the variance of a sum of random variables given the covariance matrix of the
+    variables.
+
+    Parameters
+    ----------
+    covariance : 2-d array
+        Covariance matrix of the random variables.
+
+    Returns
+    -------
+    var : float
+        Variance of the summation over the random variable.
+    """
+    var = 0
+    for i in range(covariance.shape[0]):
+        var += covariance[i, i]
+        for j in range(i+1, covariance.shape[0]):
+            var += 2 * covariance[i, j]
+    return var
 
 
 stacked_dims = ["measurement", "state", "measurement_2", "state_2"]
@@ -28,6 +76,7 @@ def convert_to_ppm(obj):
     factor = Vm / m / cubic_meter_to_liter
     return obj * factor
 
+
 def stack_xr(xr_data_array):
     for stacked_dim, dim_pair in zip(stacked_dims, dim_pairs):
         if dim_pair[0] in xr_data_array.dims and dim_pair[1] in xr_data_array.dims:
@@ -46,8 +95,13 @@ def unstack_xr(xr_data_array):
 
 # Temporal correlation with correlation length tau
 def compute_corr(delta_t, tau_h, tau_d, delta_l=0, tau_l=1):
-    corr_factor = (delta_t % 24) / tau_h + (delta_t // 24) / tau_d + delta_l / tau_l
-    if (corr_factor) <= 3:
+    # delta_h = np.min([delta_t % 24, 24 - delta_t % 24])
+    delta_h = delta_t
+    # Leave out daily correlation
+    # delta_d = np.rint(delta_t / 24)
+    delta_d = 0.
+    corr_factor = delta_h / tau_h + delta_d / tau_d + delta_l / tau_l
+    if (corr_factor) <= 6:
         return np.exp(-corr_factor)
     else:
         return 0.0
@@ -127,3 +181,35 @@ def compute_prior_covariance(xr_prior_var, tau_h, tau_d, tau_l=None, point_list=
     # )
 
     return prior_covariance
+
+
+def get_K_kernel(con_path, sensors_index, n_sensors, emissions_mask, n_emissions):
+    con_dict = ggpymanager.utils.read_gral_concentration(con_path)
+    height_list = np.unique(sensors_index[2])
+    xr_K = xr.DataArray(
+        data=np.zeros((n_sensors, n_emissions)),
+        dims=["sensor", "source_group"],
+        coords={
+            "source_group": emissions_mask[emissions_mask == True].coords[
+                "source_group"
+            ]
+        },
+    )
+    for key, val in con_dict.items():
+        # Height needed for sensors
+        height = int(key[0]) - 1
+        if height in height_list:
+            source_group = int(key[1:])
+            # Source group id in emissions
+            if source_group < len(emissions_mask):
+                if emissions_mask.sel(source_group=source_group):
+                    # Array not empty
+                    if val.size > 1:
+                        index = sensors_index[2] == height
+                        xr_K.loc[index, source_group] = val[
+                            (
+                                sensors_index[0][index],
+                                sensors_index[1][index],
+                            )
+                        ]
+    return xr_K
