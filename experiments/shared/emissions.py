@@ -6,52 +6,24 @@ from pathlib import Path
 
 from ..shared import utilities as utils
 
-point_source_ids = [0, 1]
-line_source_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
-tno_cadastre_source_ids = [
-    20,
-    21,
-    22,
-    23,
-    24,
-    25,
-    26,
-    27,
-    28,
-    29,
-    30,
-    31,
-    32,
-    33,
-    34,
-    35,
-    36,
-    37,
-    38,
-]
-heat_cadastre_source_ids = [
-    39,
-    40,
-    41,
-    42,
-    43,
-    44,
-    45,
-    46,
-    47,
-    48,
-    49,
-    50,
-    51,
-    52,
-    53,
-    54,
-    55,
-    56,
-    58,
-]
 
-n_sources = 59
+# Indices with the source group number in GRAL (1-based indexing)
+point_source_index = np.array(range(1, 3))
+# 13-15 have no emissions
+line_source_index = np.array(range(3, 25))
+# 35-37 have no emissions
+tno_cadastre_source_index = np.concatenate([range(25, 35), range(38, 47)])
+heat_cadastre_source_index = np.array(range(47, 69))
+all_index = np.array(range(1, 69))
+
+# Indices for 0-based indexing
+point_source_ids = point_source_index - 1
+line_source_ids = line_source_index - 1
+tno_cadastre_source_ids = tno_cadastre_source_index - 1
+heat_cadastre_source_ids = heat_cadastre_source_index - 1
+all_ids = all_index - 1
+
+n_sources = len(all_ids)
 point_list = None
 
 
@@ -68,8 +40,20 @@ class Emissions:
                 emission_path: path to GRAL emission files.
             Optional config keys (default):
                 time: (1) number of hourly measurements.
-                prior_mode: (single_time) {single_time, constant, diurnal}
-                truth_mode: (single_time) {single_time, constant, diurnal}
+                prior_mode: (single_time) {
+                        single_time, 
+                        constant, 
+                        diurnal, 
+                        single_diurnal,
+                        constant_diurnal,
+                    }
+                truth_mode: (single_time) {
+                        single_time, 
+                        constant, 
+                        diurnal, 
+                        single_diurnal,
+                        constant_diurnal,
+                    }
                 tau_h: correlation length in hours.
                 tau_d: correlation length in days.
         """
@@ -79,15 +63,23 @@ class Emissions:
 
         self.config_path = Path(config["emission_path"])
 
+        source_group_path = Path(
+            "/mnt/data/users/rmaiwald/GRAMM-GRAL/emissions/pickle_jar/source_groups_infos.csv"
+        )
+        self.source_group_df = pd.read_csv(
+            source_group_path,
+            index_col=0,
+        )
+        self.absolute_emissions = self.get_absolute()
+
         # Relative emission values
         self.prior = self.get(config["prior"], config["prior_mode"])
         self.prior_variance = self.get(config["prior_variance"], config["prior_mode"])
         self.truth = self.get(config["truth"], config["truth_mode"])
         # Absolute emission values
-        absolute_emissions = self.get_absolute()
-        self.prior_absolute = self.prior * absolute_emissions
-        self.prior_absolute_variance = self.prior_variance * absolute_emissions
-        self.truth_absolute = self.truth * absolute_emissions
+        self.prior_absolute = self.prior * self.absolute_emissions
+        self.prior_absolute_variance = self.prior_variance * self.absolute_emissions
+        self.truth_absolute = self.truth * self.absolute_emissions
 
         self.mask = (self.prior.isel(time_state=0) != 0.0) | (
             self.truth.isel(time_state=0) != 0.0
@@ -137,10 +129,14 @@ class Emissions:
     def get_time_factor(self, mode):
         if mode == "diurnal":
             time_factor = self.get_diurnal_factors(self.time)
+        elif mode == "single_diurnal":
+            time_factor = self.get_diurnal_factors(np.min([24, self.time]))
         elif mode == "single_time":
             time_factor = np.ones((1, n_sources))
         elif mode == "constant":
             time_factor = np.ones((self.time, n_sources))
+        elif mode == "constant_diurnal":
+            time_factor = np.ones((np.min([24, self.time]), n_sources))
         xr_time_factor = xr.DataArray(time_factor, dims=["time_state", "source_group"])
         return xr_time_factor
 
@@ -187,7 +183,8 @@ class Emissions:
         # 1. get geopandas dataframe
         # 2. normalize heating with TNO values?
         emissions = np.zeros(n_sources)
-        emissions[point_source_ids + tno_cadastre_source_ids] = 1
+        emissions[point_source_ids] = 1
+        emissions[tno_cadastre_source_ids] = 1
         return emissions
 
     def get_TNO_variance(self):
@@ -195,14 +192,25 @@ class Emissions:
 
     def get_mean_TNO(self):
         # 1. get geopandas dataframe
+        path = Path("/mnt/data/users/rmaiwald/")
+        with open(
+            path / "GRAMM-GRAL/emissions/heat_traffic/tno_districts_gdf.pickle",
+            "rb",
+        ) as file:
+            tno_districts_gdf = pickle.load(file)
+
         # 2. compute TNO emissions per m^2
-        # 3. give factor to mean
-        emissions = np.zeros(n_sources)
-        emissions_abs = self.get_absolute() # kg/h
-        mean_TNO = emissions_abs[tno_cadastre_source_ids].mean() # kg/h
-        emissions[tno_cadastre_source_ids] = mean_TNO # kg/h
+        area = tno_districts_gdf["area"]
+        emissions_tno_cadastre = self.absolute_emissions.loc[tno_cadastre_source_index]
+        emissions_tno_cadastre = emissions_tno_cadastre.sum().values * area / area.sum()
         # Normalize
-        emissions[tno_cadastre_source_ids] /= emissions_abs[tno_cadastre_source_ids]
+        emissions_tno_cadastre = (
+            emissions_tno_cadastre
+            / self.absolute_emissions.loc[tno_cadastre_source_index]
+        )
+        # 3. Create values for all other source groups
+        emissions = np.zeros(n_sources)
+        emissions[tno_cadastre_source_ids] = emissions_tno_cadastre
         return emissions
 
     def get_mean_TNO_variance(self):
@@ -280,8 +288,7 @@ class Emissions:
             time_factor[t, :2] = point_sum / point_base_sum
 
             # Line sources
-            index = slice(line_source_ids[0], line_source_ids[-1] + 1)
-            time_factor[t, index] = time_factor_GNFR["F"]
+            time_factor[t, line_source_ids] = time_factor_GNFR["F"]
 
             # District sources
             # Multiply district sources with time factor
@@ -290,12 +297,10 @@ class Emissions:
             )
             # Sum over co2 emissions
             district_sum = mdistrict[district_index_co2].sum(axis=1)
-            index = slice(tno_cadastre_source_ids[0], tno_cadastre_source_ids[-1] + 1)
-            time_factor[t, index] = district_sum / district_base_sum
+            time_factor[t, tno_cadastre_source_ids] = district_sum / district_base_sum
 
             # Heating sources
-            index = slice(heat_cadastre_source_ids[0], heat_cadastre_source_ids[-1] + 1)
-            time_factor[t, index] = time_factor_GNFR["C"]
+            time_factor[t, heat_cadastre_source_ids] = time_factor_GNFR["C"]
 
         return time_factor
 
@@ -335,12 +340,10 @@ class Emissions:
         mpoint = tno_points_gdf[em_factor_gfnr.index].multiply(em_factor_gfnr, level=0)
         # Sum over co2 emissions
         point_sum = mpoint[point_index_co2].sum(axis=1)
-        index = slice(point_source_ids[0], point_source_ids[-1] + 1)
-        em_factor[index] = point_sum / point_base_sum
+        em_factor[point_source_ids] = point_sum / point_base_sum
 
         # Line sources
-        index = slice(line_source_ids[0], line_source_ids[-1] + 1)
-        em_factor[index] = em_factor_gfnr["F1"]
+        em_factor[line_source_ids] = em_factor_gfnr["F1"]
 
         # District sources
         # Multiply district sources with emission factor
@@ -349,12 +352,10 @@ class Emissions:
         )
         # Sum over co2 emissions
         district_sum = mdistrict[district_index_co2].sum(axis=1)
-        index = slice(tno_cadastre_source_ids[0], tno_cadastre_source_ids[-1] + 1)
-        em_factor[index] = district_sum / district_base_sum
+        em_factor[tno_cadastre_source_ids] = district_sum / district_base_sum
 
         # Heating sources
-        index = slice(heat_cadastre_source_ids[0], heat_cadastre_source_ids[-1] + 1)
-        em_factor[index] = em_factor_gfnr["C"]
+        em_factor[heat_cadastre_source_ids] = em_factor_gfnr["C"]
 
         return em_factor
 

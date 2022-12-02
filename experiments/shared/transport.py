@@ -67,7 +67,7 @@ class Transport:
     def init_K(self, n_sensors, emissions):
         # Construct the transport model matrix K
         n_time_measurement = self.time
-        n_time_state = self.time if not emissions.prior_mode == "single_time" else 1
+        n_time_state = len(emissions.prior.time_state)
         K = np.zeros(
             (n_sensors, n_time_measurement, len(emissions.prior), n_time_state)
         )
@@ -138,7 +138,7 @@ class Transport:
         print(f"loop start {time.perf_counter()-start}")
         for ti, xr_K_ti in enumerate(xr_K_list):
             ti_measurement = ti
-            ti_state = ti if not emissions.prior_mode == "single_time" else 0
+            ti_state = ti % len(emissions.prior.time_state)
             # ti_meteo_id = meteo_ids[ti]
             xr_K.loc[:, ti_measurement, :, ti_state] = xr_K_ti
         print(f"loop end {time.perf_counter() - start}")

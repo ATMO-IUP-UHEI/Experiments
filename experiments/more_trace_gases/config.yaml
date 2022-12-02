@@ -1,5 +1,5 @@
 seed: 2
-time: 100
+time: 336 # Two weeks
 transport:
   mode: realistic
 sensors:
@@ -7,18 +7,18 @@ sensors:
   height: 0 # 0-4
   noise: 1.0
 emissions:
-  prior_mode: constant
+  prior_mode: constant_diurnal
   prior: mean_TNO
   prior_variance: mean_TNO_variance
   truth: TNO
-  truth_mode: diurnal
+  truth_mode: single_diurnal
   correlation:
     tau_h: 1.0 # 1/e correlation after 1h
     tau_d: 0.001 #2. # 1/e correlation after 2d
   #   tau_l: null # 1/e correlation for each km in mean distance
 reader:
   catalog_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gramm_catalog/
-  config_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/config/
-  simulation_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_04/
+  config_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_05/config/
+  simulation_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_05/
 paths:
   data_jar: /home/rmaiwald/results/experiments/
