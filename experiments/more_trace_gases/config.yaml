@@ -1,5 +1,5 @@
 seed: 2
-time: 336 # Two weeks
+time: 24 # Two weeks
 transport:
   mode: realistic
 sensors:
@@ -8,12 +8,12 @@ sensors:
   noise: 1.0
 emissions:
   prior_mode: constant_diurnal
-  prior: mean_TNO
+  prior: mean_TNO_with_points
   prior_variance: mean_TNO_variance
-  truth: TNO
+  truth: combined_emissions
   truth_mode: single_diurnal
   correlation:
-    tau_h: 1.0 # 1/e correlation after 1h
+    tau_h: 0.001 #1.0 # 1/e correlation after 1h
     tau_d: 0.001 #2. # 1/e correlation after 2d
   #   tau_l: null # 1/e correlation for each km in mean distance
 reader:

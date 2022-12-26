@@ -6,6 +6,105 @@ import xarray as xr
 import ggpymanager.utils
 
 
+def compute_rmse(x, y):
+    return np.sqrt(np.mean((x - y)**2))
+
+def get_plotting_params(
+    exp,
+    posterior_0,
+    posterior_covariance_0,
+    posterior_1,
+    posterior_covariance_1,
+    index,
+):
+    """
+    Compute the input to plot a comparison of two emission estimates as well as the 
+    prior and truth.
+
+    Parameters
+    ----------
+    exp : Experiment
+        Initialised Experiment.
+    posterior_0 : xarray
+        First posterior.
+    posterior_covariance_0 : xarray or numpy array
+        First posterior covariance.    
+    posterior_1 : xarray
+        Second posterior.
+    posterior_covariance_1 : xarray or numpy array
+        Second posterior covariance.
+    index : list of int 
+        List of the source groups which should be used to compute the sum.
+
+    Returns
+    -------
+    time : xarray
+        Time for the x-axis of the plot in hours.
+    sum_0 : xarray
+        Sum of first posterior.
+    std_0 : xarray
+        Sum of first posterior covariance.
+    sum_1 : xarray
+        Sum of second posterior.
+    std_1 : xarray
+        Sum of second posterior covariance.
+    sum_prior : xarray
+        Sum of prior.
+    sum_truth : xarray
+        Sum of truth.
+    """
+    time = exp.emissions.prior_absolute.time_state
+    # No correlation
+    sum_0 = posterior_0.sel(source_group=index).sum("source_group")
+    if isinstance(posterior_covariance_0, np.ndarray):
+        covariance = unstack_xr(exp.emissions.to_xr(posterior_covariance_0)).sel(
+            source_group=index,
+            source_group_2=index,
+        )
+        covariance = (
+            covariance
+            * exp.emissions.absolute_emissions
+            * exp.emissions.absolute_emissions.rename({"source_group": "source_group_2"})
+        )
+    else:
+        covariance = posterior_covariance_0
+
+    std_0 = np.zeros_like(time)
+    for i in range(len(time)):
+        std_0[i] = np.sqrt(var_of_sum(covariance.isel(time_state=i, time_state_2=i)))
+
+    # Correlation
+    sum_1 = posterior_1.sel(source_group=index).sum("source_group")
+    if isinstance(posterior_covariance_0, np.ndarray):
+        covariance = unstack_xr(exp.emissions.to_xr(posterior_covariance_1)).sel(
+            source_group=index,
+            source_group_2=index,
+        )
+        covariance = (
+            covariance
+            * exp.emissions.absolute_emissions
+            * exp.emissions.absolute_emissions.rename({"source_group": "source_group_2"})
+        )
+    else:
+        covariance = posterior_covariance_1
+
+    std_1 = np.zeros_like(time)
+    for i in range(len(time)):
+        std_1[i] = np.sqrt(var_of_sum(covariance.isel(time_state=i, time_state_2=i)))
+
+    # Prior
+    sum_prior = exp.emissions.prior_absolute.sel(source_group=index).sum(
+        "source_group"
+    )
+
+    # Truth
+    sum_truth = exp.emissions.truth_absolute.sel(source_group=index).sum(
+        "source_group"
+    )
+
+    return time, sum_0, std_0, sum_1, std_1, sum_prior, sum_truth
+
+
 def concatenate_indices(ind_a, ind_b):
     """
     Concatenate two indices from sensor configuration.
@@ -29,7 +128,7 @@ def concatenate_indices(ind_a, ind_b):
     """
     new_ind = tuple()
     for a, b in zip(ind_a, ind_b):
-        new_ind += (np.concatenate([a,b]),)
+        new_ind += (np.concatenate([a, b]),)
     return new_ind
 
 
@@ -51,7 +150,7 @@ def var_of_sum(covariance):
     var = 0
     for i in range(covariance.shape[0]):
         var += covariance[i, i]
-        for j in range(i+1, covariance.shape[0]):
+        for j in range(i + 1, covariance.shape[0]):
             var += 2 * covariance[i, j]
     return var
 
@@ -99,7 +198,7 @@ def compute_corr(delta_t, tau_h, tau_d, delta_l=0, tau_l=1):
     delta_h = delta_t
     # Leave out daily correlation
     # delta_d = np.rint(delta_t / 24)
-    delta_d = 0.
+    delta_d = 0.0
     corr_factor = delta_h / tau_h + delta_d / tau_d + delta_l / tau_l
     if (corr_factor) <= 6:
         return np.exp(-corr_factor)

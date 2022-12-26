@@ -1,17 +1,17 @@
-seed: 5
-time: 300
+seed: 2
+time: 24
 transport:
   mode: realistic
 sensors:
-  n_sensors: 100
+  n_sensors: 20
   height: 0 # 0-4
   noise: 1.0
 emissions:
-  prior_mode: single_time
+  prior_mode: constant_diurnal
   prior: mean_TNO
   prior_variance: mean_TNO_variance
-  truth_mode: single_time
   truth: combined_emissions
+  truth_mode: single_diurnal
   # correlation:
   #   tau_h: .001 # 1/e correlation after 1h
   #   tau_d: 0.001 #2. # 1/e correlation after 2d

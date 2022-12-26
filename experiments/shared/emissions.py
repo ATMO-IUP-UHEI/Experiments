@@ -34,23 +34,39 @@ class Emissions:
         ----------
         config : dict
             Required config keys:
-                prior: prior emission name {TNO, mean_TNO, combined_emissions}.
-                prior_variance: prior variance name {TNO_variance, mean_TNO_variance}.
-                truth: prior emission name {TNO, mean_TNO, combined_emissions}.
+                prior: prior emission name 
+                    {
+                        TNO, 
+                        mean_TNO,
+                        mean_TNO_with_points,
+                        combined_emissions,
+                    }
+                prior_variance: prior variance name 
+                    {
+                        TNO_variance, 
+                        mean_TNO_variance,
+                    }
+                truth: true emission name 
+                    {
+                        TNO, 
+                        mean_TNO, 
+                        mean_TNO_with_points,
+                        combined_emissions,
+                    }
                 emission_path: path to GRAL emission files.
             Optional config keys (default):
                 time: (1) number of hourly measurements.
                 prior_mode: (single_time) {
-                        single_time, 
-                        constant, 
-                        diurnal, 
+                        single_time,
+                        constant,
+                        diurnal,
                         single_diurnal,
                         constant_diurnal,
                     }
                 truth_mode: (single_time) {
-                        single_time, 
-                        constant, 
-                        diurnal, 
+                        single_time,
+                        constant,
+                        diurnal,
                         single_diurnal,
                         constant_diurnal,
                     }
@@ -63,6 +79,7 @@ class Emissions:
 
         self.config_path = Path(config["emission_path"])
 
+        # Move to config
         source_group_path = Path(
             "/mnt/data/users/rmaiwald/GRAMM-GRAL/emissions/pickle_jar/source_groups_infos.csv"
         )
@@ -112,6 +129,7 @@ class Emissions:
             "TNO": self.get_TNO,
             "TNO_variance": self.get_TNO_variance,
             "mean_TNO": self.get_mean_TNO,
+            "mean_TNO_with_points": self.get_mean_TNO_with_points,
             "mean_TNO_variance": self.get_mean_TNO_variance,
             "heat": self.get_heat_emissions,
             "traffic": self.get_traffic_emissions,
@@ -213,9 +231,16 @@ class Emissions:
         emissions[tno_cadastre_source_ids] = emissions_tno_cadastre
         return emissions
 
+    def get_mean_TNO_with_points(self):
+        emissions = self.get_mean_TNO()
+        emissions[point_source_ids] = 1
+        return emissions
+
     def get_mean_TNO_variance(self):
         emissions = self.get_mean_TNO() ** 2
         emissions[point_source_ids] = 1
+        emissions[line_source_ids] = 1 # Make reasonable var
+        emissions[heat_cadastre_source_ids] = 1 # Make reasonable var
         return emissions
 
     def get_heat_emissions(self):
@@ -229,7 +254,37 @@ class Emissions:
         return emissions
 
     def get_combined_emissions(self):
-        return np.ones(n_sources)
+        # Replace TNO traffic and stationary combustion with the data from
+        # Geoinformatics and from the Stadtwerke
+        emissions = np.zeros(n_sources)
+        emissions[point_source_ids] = 1
+        emissions[line_source_ids] = 1
+        emissions[heat_cadastre_source_ids] = 1
+        # Compute new emissions for TNO area sources
+        path = Path("/mnt/data/users/rmaiwald/")
+        with open(
+            path / "GRAMM-GRAL/emissions/heat_traffic/tno_districts_gdf.pickle",
+            "rb",
+        ) as file:
+            tno_districts_gdf = pickle.load(file)
+        heating_emission_categories = ["A", "B", "C"]
+        traffic_emission_categories = ["F1", "F2", "F3"]
+        tno_emission_categories = ["D", "E", "G", "H", "I", "J", "L"]
+        categories = (
+            heating_emission_categories
+            + traffic_emission_categories
+            + tno_emission_categories
+        )
+
+        tno_index = pd.MultiIndex.from_product(
+            [tno_emission_categories, ["co2_ff", "co2_bf"]]
+        )
+        total_index = pd.MultiIndex.from_product([categories, ["co2_ff", "co2_bf"]])
+        # tno_emission
+        tno_sum = tno_districts_gdf[tno_index].sum(axis="columns")
+        total_sum = tno_districts_gdf[total_index].sum(axis="columns")
+        emissions[tno_cadastre_source_ids] = tno_sum / total_sum
+        return emissions
 
     def get_diurnal_factors(self, time):
         path = Path("/mnt/data/users/rmaiwald/")
