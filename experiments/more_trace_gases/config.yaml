@@ -1,5 +1,5 @@
-seed: 2
-time: 24 # Two weeks
+seed: 42
+time: 120 #168 # Two weeks
 transport:
   mode: realistic
 sensors:

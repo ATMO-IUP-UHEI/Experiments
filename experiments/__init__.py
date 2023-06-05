@@ -4,6 +4,7 @@ from .sensor_placement import SensorPlacement
 from .optimal_sensor_choice import OptimalSensorChoice
 from .effect_correlation import EffectCorrelation
 from .more_trace_gases import MoreTraceGases
+from .egu_optimal_setup import EGUOptimalSetup
 
 __all__ = [
     "utilities",
@@ -16,4 +17,5 @@ __all__ = [
     "OptimalSensorChoice",
     "EffectCorrelation",
     "MoreTraceGases",
+    "EGUOptimalSetup",
 ]

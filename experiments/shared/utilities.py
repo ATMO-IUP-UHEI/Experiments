@@ -7,7 +7,8 @@ import ggpymanager.utils
 
 
 def compute_rmse(x, y):
-    return np.sqrt(np.mean((x - y)**2))
+    return np.sqrt(np.mean((x - y) ** 2))
+
 
 def get_plotting_params(
     exp,
@@ -18,7 +19,7 @@ def get_plotting_params(
     index,
 ):
     """
-    Compute the input to plot a comparison of two emission estimates as well as the 
+    Compute the input to plot a comparison of two emission estimates as well as the
     prior and truth.
 
     Parameters
@@ -28,12 +29,12 @@ def get_plotting_params(
     posterior_0 : xarray
         First posterior.
     posterior_covariance_0 : xarray or numpy array
-        First posterior covariance.    
+        First posterior covariance.
     posterior_1 : xarray
         Second posterior.
     posterior_covariance_1 : xarray or numpy array
         Second posterior covariance.
-    index : list of int 
+    index : list of int
         List of the source groups which should be used to compute the sum.
 
     Returns
@@ -57,18 +58,25 @@ def get_plotting_params(
     # No correlation
     sum_0 = posterior_0.sel(source_group=index).sum("source_group")
     if isinstance(posterior_covariance_0, np.ndarray):
+        # Select source groups
         covariance = unstack_xr(exp.emissions.to_xr(posterior_covariance_0)).sel(
             source_group=index,
             source_group_2=index,
         )
+        # Scale covariance
         covariance = (
             covariance
             * exp.emissions.absolute_emissions
-            * exp.emissions.absolute_emissions.rename({"source_group": "source_group_2"})
+            * exp.emissions.absolute_emissions.rename(
+                {"source_group": "source_group_2"}
+            )
         )
     else:
-        covariance = posterior_covariance_0
-
+        # Only select source groups
+        covariance = posterior_covariance_0.sel(
+            source_group=index,
+            source_group_2=index,
+        )
     std_0 = np.zeros_like(time)
     for i in range(len(time)):
         std_0[i] = np.sqrt(var_of_sum(covariance.isel(time_state=i, time_state_2=i)))
@@ -76,31 +84,35 @@ def get_plotting_params(
     # Correlation
     sum_1 = posterior_1.sel(source_group=index).sum("source_group")
     if isinstance(posterior_covariance_0, np.ndarray):
+        # Select source groups
         covariance = unstack_xr(exp.emissions.to_xr(posterior_covariance_1)).sel(
             source_group=index,
             source_group_2=index,
         )
+        # Scale covariance
         covariance = (
             covariance
             * exp.emissions.absolute_emissions
-            * exp.emissions.absolute_emissions.rename({"source_group": "source_group_2"})
+            * exp.emissions.absolute_emissions.rename(
+                {"source_group": "source_group_2"}
+            )
         )
     else:
-        covariance = posterior_covariance_1
+        # Only select source groups
+        covariance = posterior_covariance_1.sel(
+            source_group=index,
+            source_group_2=index,
+        )
 
     std_1 = np.zeros_like(time)
     for i in range(len(time)):
         std_1[i] = np.sqrt(var_of_sum(covariance.isel(time_state=i, time_state_2=i)))
 
     # Prior
-    sum_prior = exp.emissions.prior_absolute.sel(source_group=index).sum(
-        "source_group"
-    )
+    sum_prior = exp.emissions.prior_absolute.sel(source_group=index).sum("source_group")
 
     # Truth
-    sum_truth = exp.emissions.truth_absolute.sel(source_group=index).sum(
-        "source_group"
-    )
+    sum_truth = exp.emissions.truth_absolute.sel(source_group=index).sum("source_group")
 
     return time, sum_0, std_0, sum_1, std_1, sum_prior, sum_truth
 

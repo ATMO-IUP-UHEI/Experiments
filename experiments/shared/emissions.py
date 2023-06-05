@@ -34,22 +34,22 @@ class Emissions:
         ----------
         config : dict
             Required config keys:
-                prior: prior emission name 
+                prior: prior emission name
                     {
-                        TNO, 
+                        TNO,
                         mean_TNO,
                         mean_TNO_with_points,
                         combined_emissions,
                     }
-                prior_variance: prior variance name 
+                prior_variance: prior variance name
                     {
-                        TNO_variance, 
+                        TNO_variance,
                         mean_TNO_variance,
                     }
-                truth: true emission name 
+                truth: true emission name
                     {
-                        TNO, 
-                        mean_TNO, 
+                        TNO,
+                        mean_TNO,
                         mean_TNO_with_points,
                         combined_emissions,
                     }
@@ -95,7 +95,7 @@ class Emissions:
         self.truth = self.get(config["truth"], config["truth_mode"])
         # Absolute emission values
         self.prior_absolute = self.prior * self.absolute_emissions
-        self.prior_absolute_variance = self.prior_variance * self.absolute_emissions
+        self.prior_absolute_variance = self.prior_variance * self.absolute_emissions**2
         self.truth_absolute = self.truth * self.absolute_emissions
 
         self.mask = (self.prior.isel(time_state=0) != 0.0) | (
@@ -239,8 +239,8 @@ class Emissions:
     def get_mean_TNO_variance(self):
         emissions = self.get_mean_TNO() ** 2
         emissions[point_source_ids] = 1
-        emissions[line_source_ids] = 1 # Make reasonable var
-        emissions[heat_cadastre_source_ids] = 1 # Make reasonable var
+        emissions[line_source_ids] = 1  # Make reasonable var
+        emissions[heat_cadastre_source_ids] = 1  # Make reasonable var
         return emissions
 
     def get_heat_emissions(self):
@@ -328,8 +328,13 @@ class Emissions:
         time_factor = np.ones((time, n_sources))
         for t in range(time):
             hour = 1 + (t % 24)
+            # Start on a Wednesday because Simone's time series starts on a Wednesday
+            day = 1 + (2 + (t // 24)) % 7
             # Multiply emission categories with the time factors
-            time_factor_snap = snap_temporal_profiles_df[("Hour", str(hour))]
+            time_factor_snap = (
+                snap_temporal_profiles_df[("Hour", str(hour))]
+                * snap_temporal_profiles_df[("Day", str(day))]
+            )
             time_factor_GNFR = time_factor_snap[gnfr_to_snap_df["SNAP_link"]]
             time_factor_GNFR.index = gnfr_to_snap_df["GNFR_Category"]
 

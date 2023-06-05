@@ -7,11 +7,11 @@ sensors:
   height: 0 # 0-4
   noise: 1.0
 emissions:
-  prior_mode: constant_diurnal
-  prior: mean_TNO
+  prior_mode: single_time
+  prior: mean_TNO_with_points
   prior_variance: mean_TNO_variance
   truth: combined_emissions
-  truth_mode: single_diurnal
+  truth_mode: single_time
   # correlation:
   #   tau_h: .001 # 1/e correlation after 1h
   #   tau_d: 0.001 #2. # 1/e correlation after 2d

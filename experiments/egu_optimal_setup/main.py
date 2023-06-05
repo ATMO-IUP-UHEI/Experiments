@@ -11,7 +11,7 @@ from experiments.shared import utilities as utils
 
 
 
-class BasicSetup(Experiment):
+class EGUOptimalSetup(Experiment):
     def __init__(self, config_path):
         super().__init__(config_path)
 
@@ -37,8 +37,3 @@ class BasicSetup(Experiment):
         print(self.reg.get_averaging_kernel())
 
     
-if __name__ == "__main__":
-    config_path = config_path = Path(__file__).resolve().parent / "config.yaml"
-
-    basic_setup = BasicSetup(config_path)
-    basic_setup.run()
