@@ -1,5 +1,5 @@
 seed: 2
-time: 300
+time: 720
 transport:
   mode: realistic
 sensors:
@@ -21,4 +21,5 @@ reader:
   config_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_05/config/
   simulation_path: /mnt/data/users/rmaiwald/GRAMM-GRAL/gral/gral_sim_path_05/
 paths:
-  data_jar: /home/rmaiwald/results/experiments/
+  data_jar: /home/rmaiwald/results/paper/experiments/
+  # data_jar: /home/rmaiwald/results/experiments/
